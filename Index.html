@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jurnal - Mr. Sholah</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #f8fafc;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      color: #38bdf8;
+    }
+    #visitorCount {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <h1>Selamat Datang di Jurnal Mr. Sholah</h1>
+  <p>Total Pengunjung:</p>
+  <div id="visitorCount">Memuat...</div>
+
+  <script>
+    async function updateVisitorCount() {
+      try {
+        // panggil CountAPI (bisa walaupun link tidak bisa dibuka langsung)
+        const res = await fetch("https://api.countapi.xyz/hit/mrsholah.github.io/Jurnal-visitors");
+        const data = await res.json();
+        document.getElementById("visitorCount").textContent = data.value.toLocaleString('id-ID');
+      } catch (err) {
+        document.getElementById("visitorCount").textContent = "Gagal memuat 😢";
+        console.error("Error:", err);
+      }
+    }
+    updateVisitorCount();
+  </script>
+</body>
+</html>
