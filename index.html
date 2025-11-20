@@ -1,46 +1,281 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jurnal - Mr. Sholah</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Berita</title>
+
+  
   <style>
-    body {
-      font-family: "Poppins", sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: #f8fafc;
-      text-align: center;
-      padding: 40px;
+    body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 20px; }
+    h2 { color: #333; }
+
+    form { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+    input, textarea {
+      width: 95%; margin: 10px 0; padding: 11px;
+      border-radius: 5px; border: 1px solid #ccc;
     }
-    h1 {
-      font-size: 2.2rem;
-      color: #38bdf8;
+    button {
+      background: #007bff; color: white; border: none;
+      padding: 10px 15px; border-radius: 5px; cursor: pointer;
+      transition: 0.3s;
     }
-    #visitorCount {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #fbbf24;
+    button:hover { background: #0056b3; }
+    button[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+    .news-list { margin-top: 40px; }
+    .card {
+      background: #fff; padding: 15px; border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .card img {
+      width: 100%; max-height: 250px;
+      object-fit: cover; border-radius: 6px;
+    }
+    .judul { margin-top: 10px; font-weight: bold; font-size: 20px; color: #007bff; }
+    .meta { color: #666; font-size: 13px; margin-bottom: 10px; }
+    .isi { white-space: pre-line; font-size: 15px; color: #444; }
+
+    .btn-group { margin-top: 12px; display: flex; gap: 10px; }
+    .edit-btn { background: #28a745; }
+    .delete-btn { background: #dc3545; }
+
+    #editModal {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none; justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: #fff; padding: 20px; width: 90%; max-width: 400px;
+      border-radius: 10px; box-shadow: 0 0 10px #333;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      background: #222;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.4s;
+    }
+    #toast.show {
+      opacity: 1;
+      pointer-events: auto;
     }
   </style>
 </head>
 <body>
-  <h1>Selamat Datang di Jurnal Mr. Sholah</h1>
-  <p>Total Pengunjung:</p>
-  <div id="visitorCount">Memuat...</div>
+
+  <div id="toast"></div>
+<center>
+  <h1>TAMBAH BERITA BARU</h1>
+  <p><b>CYBER MEDIA PAI B</b></p></center>
+  <form id="newsForm">
+    <input type="text" name="gambar" placeholder="Link Gambar (Imgur)"/>
+    <input type="text" name="penulis" placeholder="Penulis" required />
+    <input type="text" name="judul" placeholder="Judul Berita" required />
+    <textarea name="isi" rows="5" placeholder="Isi Berita" required></textarea>
+    <input type="date" name="tanggal" required />
+    <input type="hidden" name="action" value="add">
+    <button id="submitBtn" type="submit">Kirim</button>
+  </form>
+
+  <h2 style="margin-top:40px;">Daftar Berita</h2>
+  <div id="newsContainer" class="news-list">Memuat data...</div>
+
+  <div id="editModal">
+    <div class="modal-content">
+      <h3>Edit Berita</h3>
+      <form id="editForm">
+        <input type="hidden" name="id" id="edit_id">
+        <input type="text" name="gambar" id="edit_gambar" required />
+        <input type="text" name="penulis" id="edit_penulis" required />
+        <input type="text" name="judul" id="edit_judul" required />
+        <textarea name="isi" id="edit_isi" rows="5" required></textarea>
+        <input type="date" name="tanggal" id="edit_tanggal" required />
+        <input type="hidden" name="action" value="edit">
+        <button id="editBtn" type="submit" class="edit-btn">Simpan Perubahan</button>
+      </form>
+      <button onclick="closeModal()" style="margin-top:10px;">Batal</button>
+    </div>
+  </div>
 
   <script>
-    async function updateVisitorCount() {
-      try {
-        // panggil CountAPI (bisa walaupun link tidak bisa dibuka langsung)
-        const res = await fetch("https://api.countapi.xyz/hit/mrsholah.github.io/Jurnal-visitors");
-        const data = await res.json();
-        document.getElementById("visitorCount").textContent = data.value.toLocaleString('id-ID');
-      } catch (err) {
-        document.getElementById("visitorCount").textContent = "Gagal memuat 😢";
-        console.error("Error:", err);
-      }
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwcWNFjHpyhjAqfT3bEHVO5umiZ8aJaK27LiLGw9QJN8h91EvdropSdahNQwvE4h8HQ/exec";
+
+    const globalPass = "DINDA"; // SANDI UNTUK SUBMIT / EDIT / HAPUS
+
+    const form = document.getElementById('newsForm');
+    const newsContainer = document.getElementById('newsContainer');
+    const submitBtn = document.getElementById("submitBtn");
+    const editBtn = document.getElementById("editBtn");
+
+    function toast(text) {
+      const t = document.getElementById("toast");
+      t.innerHTML = text;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 10);
     }
-    updateVisitorCount();
+
+    function formatTanggal(tgl) {
+      if (!tgl) return "";
+      if (String(tgl).includes("T")) return String(tgl).split("T")[0];
+      return String(tgl).split(" ")[0];
+    }
+
+    /* ------------ TAMBAH BERITA + PASSWORD ------------ */
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const pw = prompt("Masukkan sandi untuk submit:");
+      if (pw !== globalPass) {
+        alert("Sandi salah!");
+        return;
+      }
+
+      const data = new FormData(form);
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "Loading...";
+
+      fetch(scriptURL, { method: 'POST', body: data })
+        .then(res => res.json())
+        .then(() => {
+          toast("Berita berhasil ditambahkan!");
+          form.reset();
+          loadNews();
+        })
+        .finally(() => {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = "Kirim";
+        });
+    });
+
+    function loadNews() {
+      newsContainer.innerHTML = "Memuat berita...";
+
+      fetch(scriptURL)
+        .then(res => res.json())
+        .then(data => {
+          newsContainer.innerHTML = "";
+
+          data.reverse().forEach(row => {
+            const tanggalFix = formatTanggal(row.tanggal);
+
+            const card = document.createElement("div");
+            card.className = "card";
+
+            card.innerHTML = `
+              <img src="${row.gambar}">
+              <div class="judul">${row.judul}</div>
+              <div class="meta">📅 ${tanggalFix} — ✍️ ${row.penulis}</div>
+              <div class="isi">${row.isi}</div>
+
+              <div class="btn-group">
+                <button class="edit-btn" onclick="editWithPass(${row.id}, '${escape(row.gambar)}', '${escape(row.penulis)}', '${escape(row.judul)}', \`${row.isi.replace(/`/g,'\\`')}\`, '${tanggalFix}')">Edit</button>
+                <button class="delete-btn" onclick="deleteWithPass(${row.id}, this)">Hapus</button>
+              </div>
+            `;
+
+            newsContainer.appendChild(card);
+          });
+
+          toast("Data berhasil dimuat");
+        });
+    }
+
+    /* ------------ EDIT DENGAN PASSWORD ------------ */
+    function editWithPass(id, gambar, penulis, judul, isi, tanggal) {
+      const pw = prompt("Masukkan sandi untuk edit:");
+      if (pw !== globalPass) {
+        alert("Sandi salah!");
+        return;
+      }
+      openModal(id, gambar, penulis, judul, isi, tanggal);
+    }
+
+    function deleteWithPass(id, btn) {
+      const pw = prompt("Masukkan sandi untuk menghapus:");
+      if (pw !== globalPass) {
+        alert("Sandi salah!");
+        return;
+      }
+
+      if (!confirm("Yakin ingin menghapus berita ini?")) return;
+
+      deleteNews(id, btn);
+    }
+
+    function deleteNews(id, btn) {
+      btn.disabled = true;
+      btn.innerHTML = "Menghapus...";
+
+      const data = new FormData();
+      data.append("action", "delete");
+      data.append("id", id);
+
+      fetch(scriptURL, { method: 'POST', body: data })
+        .then(res => res.json())
+        .then(() => {
+          toast("Berita dihapus");
+          loadNews();
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerHTML = "Hapus";
+        });
+    }
+
+    function openModal(id, gambar, penulis, judul, isi, tanggal) {
+      document.getElementById("edit_id").value = id;
+      document.getElementById("edit_gambar").value = unescape(gambar);
+      document.getElementById("edit_penulis").value = unescape(penulis);
+      document.getElementById("edit_judul").value = unescape(judul);
+      document.getElementById("edit_isi").value = isi;
+      document.getElementById("edit_tanggal").value = formatTanggal(tanggal);
+
+      document.getElementById("editModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("editModal").style.display = "none";
+    }
+
+    /* ------------ SIMPAN EDIT ------------ */
+    document.getElementById("editForm").addEventListener("submit", e => {
+      e.preventDefault();
+
+      const pw = prompt("Masukkan sandi untuk menyimpan perubahan:");
+      if (pw !== globalPass) {
+        alert("Sandi salah!");
+        return;
+      }
+
+      const data = new FormData(e.target);
+
+      editBtn.disabled = true;
+      editBtn.innerHTML = "Menyimpan...";
+
+      fetch(scriptURL, { method: 'POST', body: data })
+        .then(res => res.json())
+        .then(() => {
+          toast("Berita berhasil diperbarui!");
+          closeModal();
+          loadNews();
+        })
+        .finally(() => {
+          editBtn.disabled = false;
+          editBtn.innerHTML = "Simpan Perubahan";
+        });
+    });
+
+    loadNews();
   </script>
+
 </body>
 </html>
